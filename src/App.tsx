@@ -17,7 +17,7 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <ProjectProvider>
-            <Router>
+            <Router basename="/Planit/">
               <div className="App">
                 <Routes>
                   <Route path="/login" element={<Login />} />
