@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/Planit',
+  base: '/Planit/',
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
