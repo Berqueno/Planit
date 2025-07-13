@@ -100,7 +100,7 @@ const Login: React.FC = () => {
         >
           <div className="flex justify-center mb-6">
             <img
-              src="/FLLB.png"
+              src="./FLLB.png"
               alt="Planit Logo"
               className="h-24 w-auto object-contain"
             />

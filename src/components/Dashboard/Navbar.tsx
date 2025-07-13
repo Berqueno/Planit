@@ -72,12 +72,12 @@ const Navbar: React.FC = () => {
             >
               <div className="flex items-center">
                 <img
-                  src="/512W.png"
+                  src="./512W.png"
                   alt="Planit Logo"
                   className="w-12 h-12 object-contain dark:block hidden"
                 />
                 <img
-                  src="/512B.png"
+                  src="./512B.png"
                   alt="Planit Logo"
                   className="w-12 h-12 object-contain dark:hidden block"
                 />
