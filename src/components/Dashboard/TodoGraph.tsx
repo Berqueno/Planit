@@ -64,6 +64,29 @@ const TodoGraph: React.FC<TodoGraphProps> = ({ onEditTodo }) => {
     new Map()
   );
 
+  const handleNodeDragStop = async (_: any, node: any) => {
+    if (!currentUser || !currentProject) return;
+
+    const todoRef = doc(
+      db,
+      "users",
+      currentUser.uid,
+      "projects",
+      currentProject.id,
+      "todos",
+      node.id
+    );
+
+    try {
+      await updateDoc(todoRef, {
+        position: node.position,
+      });
+      console.log(`Pozisyon güncellendi: ${node.id}`, node.position);
+    } catch (error) {
+      console.error("Pozisyon güncellenirken hata:", error);
+    }
+  };
+
   const updatePositionInFirestore = useCallback(
     async (nodeId: string, position: { x: number; y: number }) => {
       if (!currentUser || !currentProject) return;
@@ -127,11 +150,22 @@ const TodoGraph: React.FC<TodoGraphProps> = ({ onEditTodo }) => {
       (snapshot) => {
         const todosData = snapshot.docs.map((doc) => {
           const data = doc.data();
+
+          // Pozisyon verisi varsa ve geçerliyse al, yoksa default ver
+          let position = { x: 400, y: 300 };
+          if (
+            data.position &&
+            typeof data.position.x === "number" &&
+            typeof data.position.y === "number"
+          ) {
+            position = data.position;
+          }
+
           return {
             id: doc.id,
             ...data,
             createdAt: data.createdAt?.toDate() || new Date(),
-            position: data.position || { x: 400, y: 300 },
+            position,
           };
         }) as Todo[];
 
@@ -213,29 +247,15 @@ const TodoGraph: React.FC<TodoGraphProps> = ({ onEditTodo }) => {
       return;
     }
 
+    // Burada sadece Firestore’dan gelen pozisyonları kullanıyoruz.
     const newNodes: Node[] = todos.map((todo) => {
-      const currentPosition = currentPositionsRef.current.get(todo.id);
-      const existingNode = nodes.find((n) => n.id === todo.id);
-
-      let position: { x: number; y: number };
-
-      if (currentPosition) {
-        position = currentPosition;
-      } else if (existingNode?.position) {
-        position = existingNode.position;
-        currentPositionsRef.current.set(todo.id, existingNode.position);
-      } else if (todo.position) {
-        position = todo.position;
-        currentPositionsRef.current.set(todo.id, todo.position);
-      } else {
-        position = generateNonOverlappingPosition(todos, { x: 400, y: 300 });
-        currentPositionsRef.current.set(todo.id, position);
-      }
+      const position = todo.position || { x: 400, y: 300 };
+      currentPositionsRef.current.set(todo.id, position);
 
       return {
         id: todo.id,
         type: "todoNode",
-        position: position,
+        position,
         data: {
           ...todo,
           onToggleComplete: handleToggleComplete,
@@ -640,6 +660,7 @@ const TodoGraph: React.FC<TodoGraphProps> = ({ onEditTodo }) => {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onNodeDragStop={handleNodeDragStop}
         onPaneClick={(event) => {
           const now = Date.now();
           const timeSinceLastClick =
@@ -656,46 +677,18 @@ const TodoGraph: React.FC<TodoGraphProps> = ({ onEditTodo }) => {
           }
         }}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          padding: 0.2,
-          includeHiddenNodes: false,
-        }}
+        // fitView kaldırıldı, pozisyon sabit kalması için
+        // defaultViewport kaldırıldı, sayfa yenilemede karışıklık olmaması için
         className="bg-gray-50 dark:bg-gray-900"
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         minZoom={0.1}
         maxZoom={2}
         attributionPosition="bottom-left"
         nodesDraggable={true}
         nodesConnectable={true}
-        elementsSelectable={true}
-        selectNodesOnDrag={false}
-        panOnDrag={true}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
-        panOnScroll={false}
-        preventScrolling={true}
-        connectionLineType="smoothstep"
-        connectionLineStyle={{ stroke: "#3B82F6", strokeWidth: 2 }}
       >
-        <Controls
-          className="bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 shadow-lg backdrop-blur-sm"
-          showInteractive={false}
-        />
-        <MiniMap
-          className="bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 shadow-lg backdrop-blur-sm"
-          nodeColor="#3B82F6"
-          maskColor="rgba(0, 0, 0, 0.1)"
-          pannable
-          zoomable
-        />
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1.5}
-          color="#9CA3AF"
-          className="opacity-30 dark:opacity-20"
-        />
+        <Controls />
+        <MiniMap />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
 
       <TaskModal
@@ -706,18 +699,7 @@ const TodoGraph: React.FC<TodoGraphProps> = ({ onEditTodo }) => {
         editingTask={editingTask}
         position={clickPosition}
       />
-
       <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate} />
-
-      {/* Create Task Button */}
-      <motion.button
-        onClick={() => handleCreateTask()}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="fixed bottom-6 right-60 w-14 h-14 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl shadow-lg hover:shadow-xl flex items-center justify-center z-10 backdrop-blur-sm transition-all duration-200"
-      >
-        <Plus className="w-6 h-6" />
-      </motion.button>
     </motion.div>
   );
 };
